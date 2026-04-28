@@ -187,7 +187,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"🛒 Заказ:\n\n"
                 f"Ник: {nickname}\n"
-                f"{item} x{amount}\n"
+                f"{item_text}\n"
                 f"Цена: {price}{symbol}\n\n"
                 f"⚠️ ВАЖНО:\n"
                 f"Укажи в сообщении к донату:\n"
