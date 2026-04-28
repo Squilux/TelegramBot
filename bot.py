@@ -179,18 +179,22 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             keyboard = [[InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)]]
 
+            if t == "cases":
+              item_text = f"{item} x{amount}"
+            else:
+                item_text = item
+
             await update.message.reply_text(
                 f"🛒 Заказ:\n\n"
                 f"Ник: {nickname}\n"
-                f"{item} x{amount}\n"
+                f"{item_text}\n"
                 f"Цена: {price}{symbol}\n\n"
                 f"⚠️ ВАЖНО:\n"
                 f"Укажи в сообщении к донату:\n"
-                f"`{message}`",
+                f"`{example}`",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
-
             del user_data[user_id]
 
     elif text == "⬅️ Назад":
