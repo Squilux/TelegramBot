@@ -87,6 +87,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
 
+    # ВЫБОР ВАЛЮТЫ
     if text in ["🇷🇺 RUB", "🇪🇺 EUR"]:
         user_data[user_id] = {"currency": text}
         keyboard = [
@@ -98,6 +99,61 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await update.message.reply_text("Выберите раздел:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
+    # ВВОД НИКА (САМЫЙ ВАЖНЫЙ БЛОК)
+    elif user_id in user_data and user_data[user_id].get("waiting_nick"):
+        data = user_data[user_id]
+
+        nickname = text
+        item = data["item"]
+        amount = data["amount"]
+        t = data["type"]
+
+        currency = data["currency"]
+        prices = prices_rub if "RUB" in currency else prices_eur
+        symbol = "₽" if "RUB" in currency else "€"
+
+        if t == "cases":
+            price = prices["cases"][item][amount]
+            message = f"{nickname} {item} {amount}"
+            example = message
+            item_text = f"{item} x{amount}"
+
+        elif t == "points":
+            price = prices["points"][item]
+            message = f"{nickname} points {item}"
+            example = message
+            item_text = item
+
+        elif t == "blocks":
+            price = prices["blocks"][item]
+            message = f"{nickname} acb {item}"
+            example = message
+            item_text = item
+
+        elif t == "ranks":
+            price = prices["ranks"][item]
+            message = f"{nickname} {item.lower()}"
+            example = message
+            item_text = item
+
+        url = f"{DONATE_URL}?amount={price}&message={message}"
+        keyboard = [[InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)]]
+
+        await update.message.reply_text(
+            f"🛒 Заказ:\n\n"
+            f"Ник: {nickname}\n"
+            f"{item_text}\n"
+            f"Цена: {price}{symbol}\n\n"
+            f"⚠️ ВАЖНО:\n"
+            f"Укажи в сообщении к донату:\n"
+            f"`{example}`",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+        del user_data[user_id]
+
+    # МЕНЮ
     elif text == "👑 Привилегии":
         user_data.setdefault(user_id, {})["type"] = "ranks"
         keyboard = [["VIP", "FLY"], ["VIP+", "PREMIUM"], ["HELPER"], ["⬅️ Назад"]]
@@ -153,49 +209,6 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["amount"] = text
             data["waiting_nick"] = True
             await update.message.reply_text("Введите ник:")
-
-        elif data.get("waiting_nick"):
-            nickname = text
-            item = data["item"]
-            amount = data["amount"]
-
-            if t == "cases":
-                price = prices["cases"][item][amount]
-                message = f"{nickname} {item} {amount}"
-
-            elif t == "points":
-                price = prices["points"][item]
-                message = f"{nickname} points {item}"
-
-            elif t == "blocks":
-                price = prices["blocks"][item]
-                message = f"{nickname} acb {item}"
-
-            elif t == "ranks":
-                price = prices["ranks"][item]
-                message = f"{nickname} {item.lower()}"
-
-            url = f"{DONATE_URL}?amount={price}&message={message}"
-
-            keyboard = [[InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)]]
-
-            if t == "cases":
-              item_text = f"{item} x{amount}"
-            else:
-                item_text = item
-
-            await update.message.reply_text(
-                f"🛒 Заказ:\n\n"
-                f"Ник: {nickname}\n"
-                f"{item_text}\n"
-                f"Цена: {price}{symbol}\n\n"
-                f"⚠️ ВАЖНО:\n"
-                f"Укажи в сообщении к донату:\n"
-                f"`{example}`",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            del user_data[user_id]
 
     elif text == "⬅️ Назад":
         await start(update, context)
