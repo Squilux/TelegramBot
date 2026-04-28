@@ -1,7 +1,8 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-TOKEN = "8724419661:AAF23AC7PPD71ztkdLlbCxsyzgLHpKtmcOE"
+import os
+TOKEN = os.getenv("TOKEN")
 DONATE_URL = "https://www.donationalerts.com/r/bananagrief"
 
 user_data = {}
