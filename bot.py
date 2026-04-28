@@ -162,22 +162,18 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if t == "cases":
                 price = prices["cases"][item][amount]
                 message = f"{nickname} {item} {amount}"
-                example = message
 
             elif t == "points":
                 price = prices["points"][item]
-                message = f"{nickname} {item}"
-                example = message
+                message = f"{nickname} points {item}"
 
             elif t == "blocks":
                 price = prices["blocks"][item]
-                message = f"{nickname} {item}"
-                example = message
+                message = f"{nickname} acb {item}"
 
             elif t == "ranks":
                 price = prices["ranks"][item]
-                message = f"{nickname} {item}"
-                example = message
+                message = f"{nickname} {item.lower()}"
 
             url = f"{DONATE_URL}?amount={price}&message={message}"
 
@@ -190,7 +186,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Цена: {price}{symbol}\n\n"
                 f"⚠️ ВАЖНО:\n"
                 f"Укажи в сообщении к донату:\n"
-                f"`{example}`",
+                f"`{message}`",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
