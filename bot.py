@@ -4,13 +4,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 import os
 TOKEN = os.getenv("TOKEN")
 DONATE_URL = "https://www.donationalerts.com/r/bananagrief"
+DISCORD_URL = "https://discord.gg/q7xUHE3c6"
 
 user_data = {}
 
 # ===============================
-# ЦЕНЫ
+# ЦЕНЫ (без изменений)
 # ===============================
-
 prices_rub = {
     "cases": {
         "Divine": {"1": 85, "5": 320, "10": 560, "20": 830},
@@ -95,11 +95,22 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["👑 Привилегии"],
             ["💎 Points"],
             ["🏡 Блоки привата"],
+            ["🛠 Поддержка"],   # ← ДОБАВИЛИ
             ["⬅️ Назад"]
         ]
         await update.message.reply_text("Выберите раздел:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
-    # ВВОД НИКА (САМЫЙ ВАЖНЫЙ БЛОК)
+    # ===============================
+    # ПОДДЕРЖКА
+    # ===============================
+    elif text == "🛠 Поддержка":
+        keyboard = [[InlineKeyboardButton("💬 Перейти в Discord", url=DISCORD_URL)]]
+        await update.message.reply_text(
+            "🛠 Поддержка\n\nЕсли у тебя есть вопросы или проблемы — заходи в Discord:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ВВОД НИКА
     elif user_id in user_data and user_data[user_id].get("waiting_nick"):
         data = user_data[user_id]
 
@@ -115,45 +126,42 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if t == "cases":
             price = prices["cases"][item][amount]
             message = f"{nickname} {item} {amount}"
-            example = message
             item_text = f"{item} x{amount}"
 
         elif t == "points":
             price = prices["points"][item]
             message = f"{nickname} points {item}"
-            example = message
             item_text = item
 
         elif t == "blocks":
             price = prices["blocks"][item]
             message = f"{nickname} acb {item}"
-            example = message
             item_text = item
 
         elif t == "ranks":
             price = prices["ranks"][item]
             message = f"{nickname} {item.lower()}"
-            example = message
             item_text = item
 
         url = f"{DONATE_URL}?amount={price}&message={message}"
-        keyboard = [[InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)]]
+        keyboard = [
+            [InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)],
+            [InlineKeyboardButton("🛠 Поддержка", url=DISCORD_URL)]
+        ]
 
         await update.message.reply_text(
             f"🛒 Заказ:\n\n"
             f"Ник: {nickname}\n"
             f"{item_text}\n"
             f"Цена: {price}{symbol}\n\n"
-            f"⚠️ ВАЖНО:\n"
-            f"Укажи в сообщении к донату:\n"
-            f"`{example}`",
+            f"⚠️ Укажи в донате:\n`{message}`",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
         del user_data[user_id]
 
-    # МЕНЮ
+    # остальные блоки БЕЗ изменений
     elif text == "👑 Привилегии":
         user_data.setdefault(user_id, {})["type"] = "ranks"
         keyboard = [["VIP", "FLY"], ["VIP+", "PREMIUM"], ["HELPER"], ["⬅️ Назад"]]
