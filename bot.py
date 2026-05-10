@@ -1,16 +1,30 @@
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
+)
+
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters
+)
 
 import os
+
 TOKEN = os.getenv("TOKEN")
+
 DONATE_URL = "https://www.donationalerts.com/r/bananagrief"
-DISCORD_URL = "https://discord.gg/q7xUHE3c6"
 
 user_data = {}
 
 # ===============================
-# ЦЕНЫ (без изменений)
+# ЦЕНЫ
 # ===============================
+
 prices_rub = {
     "cases": {
         "Divine": {"1": 85, "5": 320, "10": 560, "20": 830},
@@ -76,41 +90,77 @@ prices_eur = {
 # ===============================
 # START
 # ===============================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["🇷🇺 RUB", "🇪🇺 EUR"]]
-    await update.message.reply_text("💱 Выберите валюту:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+
+    await update.message.reply_text(
+        "💱 Выберите валюту:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True
+        )
+    )
+
+# ===============================
+# MAIN MENU
+# ===============================
+
+async def show_main_menu(update: Update):
+    keyboard = [
+        ["🎰 Кейсы"],
+        ["👑 Привилегии"],
+        ["💎 Points"],
+        ["🏡 Блоки привата"],
+        ["⬅️ Назад"]
+    ]
+
+    await update.message.reply_text(
+        "Выберите раздел:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True
+        )
+    )
 
 # ===============================
 # MENU
 # ===============================
+
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
 
+    # ===============================
+    # BACK BUTTON
+    # ===============================
+
+    if text == "⬅️ Назад":
+        currency = user_data.get(user_id, {}).get("currency")
+
+        # Если валюта выбрана — возвращаем в меню
+        if currency:
+            user_data[user_id] = {"currency": currency}
+            await show_main_menu(update)
+
+        # Если валюты нет — на старт
+        else:
+            await start(update, context)
+
+        return
+
+    # ===============================
     # ВЫБОР ВАЛЮТЫ
+    # ===============================
+
     if text in ["🇷🇺 RUB", "🇪🇺 EUR"]:
         user_data[user_id] = {"currency": text}
-        keyboard = [
-            ["🎰 Кейсы"],
-            ["👑 Привилегии"],
-            ["💎 Points"],
-            ["🏡 Блоки привата"],
-            ["🛠 Поддержка"],   # ← ДОБАВИЛИ
-            ["⬅️ Назад"]
-        ]
-        await update.message.reply_text("Выберите раздел:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+        await show_main_menu(update)
 
     # ===============================
-    # ПОДДЕРЖКА
-    # ===============================
-    elif text == "🛠 Поддержка":
-        keyboard = [[InlineKeyboardButton("💬 Перейти в Discord", url=DISCORD_URL)]]
-        await update.message.reply_text(
-            "🛠 Поддержка\n\nЕсли у тебя есть вопросы или проблемы — заходи в Discord:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-
     # ВВОД НИКА
+    # ===============================
+
     elif user_id in user_data and user_data[user_id].get("waiting_nick"):
         data = user_data[user_id]
 
@@ -120,55 +170,82 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         t = data["type"]
 
         currency = data["currency"]
+
         prices = prices_rub if "RUB" in currency else prices_eur
         symbol = "₽" if "RUB" in currency else "€"
 
         if t == "cases":
             price = prices["cases"][item][amount]
             message = f"{nickname} {item} {amount}"
+            example = message
             item_text = f"{item} x{amount}"
 
         elif t == "points":
             price = prices["points"][item]
             message = f"{nickname} points {item}"
+            example = message
             item_text = item
 
         elif t == "blocks":
             price = prices["blocks"][item]
             message = f"{nickname} acb {item}"
+            example = message
             item_text = item
 
         elif t == "ranks":
             price = prices["ranks"][item]
             message = f"{nickname} {item.lower()}"
+            example = message
             item_text = item
 
         url = f"{DONATE_URL}?amount={price}&message={message}"
-        keyboard = [
-            [InlineKeyboardButton(f"💳 Оплатить {price}{symbol}", url=url)],
-            [InlineKeyboardButton("🛠 Поддержка", url=DISCORD_URL)]
-        ]
+
+        keyboard = [[
+            InlineKeyboardButton(
+                f"💳 Оплатить {price}{symbol}",
+                url=url
+            )
+        ]]
 
         await update.message.reply_text(
             f"🛒 Заказ:\n\n"
             f"Ник: {nickname}\n"
             f"{item_text}\n"
             f"Цена: {price}{symbol}\n\n"
-            f"⚠️ Укажи в донате:\n`{message}`",
+            f"⚠️ ВАЖНО:\n"
+            f"Укажи в сообщении к донату:\n"
+            f"`{example}`",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
         del user_data[user_id]
 
-    # остальные блоки БЕЗ изменений
+    # ===============================
+    # МЕНЮ
+    # ===============================
+
     elif text == "👑 Привилегии":
         user_data.setdefault(user_id, {})["type"] = "ranks"
-        keyboard = [["VIP", "FLY"], ["VIP+", "PREMIUM"], ["HELPER"], ["⬅️ Назад"]]
-        await update.message.reply_text("Выберите привилегию:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+
+        keyboard = [
+            ["VIP", "FLY"],
+            ["VIP+", "PREMIUM"],
+            ["HELPER"],
+            ["⬅️ Назад"]
+        ]
+
+        await update.message.reply_text(
+            "Выберите привилегию:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True
+            )
+        )
 
     elif text == "🎰 Кейсы":
         user_data.setdefault(user_id, {})["type"] = "cases"
+
         keyboard = [
             ["Divine", "Inferno"],
             ["Supreme", "Bloodmoon"],
@@ -176,28 +253,70 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["Legend"],
             ["⬅️ Назад"]
         ]
-        await update.message.reply_text("Выберите кейс:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+
+        await update.message.reply_text(
+            "Выберите кейс:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True
+            )
+        )
 
     elif text == "💎 Points":
         user_data.setdefault(user_id, {})["type"] = "points"
-        keyboard = [["100", "300"], ["500", "1000"], ["⬅️ Назад"]]
-        await update.message.reply_text("Выберите Points:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+
+        keyboard = [
+            ["100", "300"],
+            ["500", "1000"],
+            ["⬅️ Назад"]
+        ]
+
+        await update.message.reply_text(
+            "Выберите Points:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True
+            )
+        )
 
     elif text == "🏡 Блоки привата":
         user_data.setdefault(user_id, {})["type"] = "blocks"
-        keyboard = [["100", "500"], ["1000", "1500"], ["⬅️ Назад"]]
-        await update.message.reply_text("Выберите блоки:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+
+        keyboard = [
+            ["100", "500"],
+            ["1000", "1500"],
+            ["⬅️ Назад"]
+        ]
+
+        await update.message.reply_text(
+            "Выберите блоки:",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True
+            )
+        )
+
+    # ===============================
+    # ОБРАБОТКА ВЫБОРА
+    # ===============================
 
     elif user_id in user_data:
         data = user_data[user_id]
+
         currency = data["currency"]
+
         prices = prices_rub if "RUB" in currency else prices_eur
         symbol = "₽" if "RUB" in currency else "€"
 
         t = data.get("type")
 
+        # ===============================
+        # CASES
+        # ===============================
+
         if t == "cases" and text in prices["cases"]:
             data["item"] = text
+
             p = prices["cases"][text]
 
             keyboard = [
@@ -205,29 +324,43 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [f"10 ({p['10']}{symbol})", f"20 ({p['20']}{symbol})"],
                 ["⬅️ Назад"]
             ]
-            await update.message.reply_text("Выберите количество:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
 
-        elif t == "cases" and any(text.startswith(x) for x in ["1", "5", "10", "20"]):
+            await update.message.reply_text(
+                "Выберите количество:",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard,
+                    resize_keyboard=True
+                )
+            )
+
+        elif t == "cases" and any(
+            text.startswith(x) for x in ["1", "5", "10", "20"]
+        ):
             data["amount"] = text.split(" ")[0]
             data["waiting_nick"] = True
+
             await update.message.reply_text("Введите ник:")
+
+        # ===============================
+        # OTHER ITEMS
+        # ===============================
 
         elif t in ["ranks", "points", "blocks"] and text in prices[t]:
             data["item"] = text
             data["amount"] = text
             data["waiting_nick"] = True
-            await update.message.reply_text("Введите ник:")
 
-    elif text == "⬅️ Назад":
-        await start(update, context)
+            await update.message.reply_text("Введите ник:")
 
 # ===============================
 # RUN
 # ===============================
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu))
 
 print("Бот запущен...")
+
 app.run_polling()
